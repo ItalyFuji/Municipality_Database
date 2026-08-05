@@ -1,10 +1,13 @@
+import re
 import pdfplumber
 import pandas as pd
 from pathlib import Path
 import jaconv # from full-width katakana to hiragana
 
 PDF_PATH = Path("data_raw/Japan_Municipality.pdf")
-OUTPUT_PATH = Path("data_output/raw_masterDB.csv")
+OUTPUT_PATH = Path("data_output/01_raw_masterDB.csv")
+
+CODE_PATTERN = re.compile(r"^[0-9]{6}$")
 
 def main():
     records = []
@@ -30,6 +33,11 @@ def main():
                     prefecture = row[1]     # 都道府県名(漢字) / Prefecture_Name(kanji)
                     municipality = row[2]   # 市区町村名(漢字) / Municipality_Name(Kanji)
                     reading_kana = row[4]   # 市区町村名(カタカナ) / Municipality_Name(katakana)
+
+                    # Header noise check: Skip rows where the table header (e.g. "団体コード")
+                    # was captured as a data row (happens once at the top of each sub-table)
+                    if not code or not CODE_PATTERN.match(str(code).strip()):
+                        continue
 
                     # Content check: Skip rows with empty municipality names (e.g., prefecture-only rows)
                     if code and municipality and str(municipality).strip() != "":

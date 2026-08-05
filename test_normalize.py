@@ -3,9 +3,9 @@ import pandas as pd
 import pytest
 from pathlib import Path
 
-# 02_normalize_municipality.py はファイル名が数字始まりのため importlib で読み込む
+# 04_normalize_municipality.py はファイル名が数字始まりのため importlib で読み込む
 spec = importlib.util.spec_from_file_location(
-    "normalize", Path(__file__).parent / "02_normalize_municipality.py"
+    "normalize", Path(__file__).parent / "04_normalize_municipality.py"
 )
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
@@ -49,20 +49,15 @@ def test_village_son_ending():
     result = format_municipality(make_row("川上村", "かわかみそん"))
     assert result.tolist() == ["村", "川上", "かわかみ"]
 
-# --- 区（除外対象） ---
+# --- 区（東京都特別区。政令市の区は03_remove_wards.pyで既に除外済み） ---
 
-def test_ward_is_filtered():
-    result = format_municipality(make_row("中央区", "ちゅうおうく"))
-    assert result.tolist() == [None, None, None]
+def test_tokyo_ward_ku_ending():
+    result = format_municipality(make_row("千代田区", "ちよだく"))
+    assert result.tolist() == ["区", "千代田", "ちよだ"]
 
-def test_ward_with_prefix_is_filtered():
-    result = format_municipality(make_row("札幌市中央区", "さっぽろしちゅうおうく"))
-    assert result.tolist() == [None, None, None]
-
-# --- ヘッダー・ノイズ（除外対象） ---
+# --- ヘッダー・ノイズ ---
 
 def test_header_noise_has_no_category():
-    # 市・町・村・区に該当しない行はcategory=NaNになる（dropnaで除外される）
     result = format_municipality(make_row("市区町村名", "しくちょうそんめい"))
     assert pd.isna(result[0])
     assert result[1] == "市区町村名"

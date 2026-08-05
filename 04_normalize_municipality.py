@@ -1,24 +1,17 @@
 import pandas as pd
 from pathlib import Path
 
-# Path setting
-INPUT_PATH = Path("data_output/raw_masterDB.csv")
-OUTPUT_PATH = Path("data_output/municipality_DB.csv")
+INPUT_PATH = Path("data_output/03_no_ward_masterDB.csv")
+OUTPUT_PATH = Path("data_output/04_normalized_masterDB.csv")
 
 def format_municipality(row):
     kanji = str(row["municipality_name"])
- 
     gana = str(row["reading_hiragana"])
 
     category = None
     short_kanji = kanji
     short_gana = gana
 
-    # Filter out wards ("区") by returning None
-    if kanji.endswith("区"):
-        return pd.Series([None, None, None])
-
-    # Extract category and remove suffixes from kanji and hiragana
     # Handle Cities (市)
     if kanji.endswith("市"):
         short_kanji = kanji[:-1]
@@ -42,23 +35,24 @@ def format_municipality(row):
         if gana.endswith("むら"):
             short_gana = gana[:-2]
         elif gana.endswith("そん"):
-            short_gana = gana[:-2]        
-    
+            short_gana = gana[:-2]
+
+    # Handle Tokyo's 23 special wards (区)
+    elif kanji.endswith("区"):
+        short_kanji = kanji[:-1]
+        category = "区"
+        if gana.endswith("く"):
+            short_gana = gana[:-1]
+
     return pd.Series([category, short_kanji, short_gana])
 
 def main():
-    df = pd.read_csv(INPUT_PATH)
+    df = pd.read_csv(INPUT_PATH, dtype=str)
 
     df[["municipality_category", "name_short", "reading_short"]] = df.apply(format_municipality, axis=1)
 
-    # Remove rows that were identified as wards ("区")
-    df = df.dropna(subset=["municipality_category"])
-
-    # Remove duplicate entries based on municipality code, prefecture, and name
-    df = df.drop_duplicates(subset=["municipality_code", "prefecture", "municipality_name"], keep="first")
-
     df.to_csv(OUTPUT_PATH, index=False, encoding="utf-8-sig")
-    print(f"Completed building Municipality_Database")
+    print("Normalized municipality categories and short names")
 
 if __name__ == "__main__":
     main()
